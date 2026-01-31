@@ -38,11 +38,12 @@ ann.add_layer(classann.Dense(784, 200, 'relu'))
 ann.add_layer(classann.Dense(200, 100, 'relu'))
 ann.add_layer(classann.Dense(100, 10))
 
-funann.train_batch(ann, X, y, funann.cross_entropy_grad_loss, epochs, batch_size, learning_rate, reg, print_n, False, True)
+losses = funann.train_batch(ann, X, y, funann.cross_entropy_grad_loss, epochs, batch_size, learning_rate, reg, print_n, False, True)
 
 # 訓練完成後，計算模型在訓練集上的準確度（Accuracy）
 # nn.predict(X) 會回傳預測類別，並與真實標籤 y 比較取平均值
-# print(np.mean(ann.predict(X) == y))
+print(np.mean(ann.predict(X) == y))
 
-accuracy = np.mean(ann.predict(X) == data['label'].values)
-print(f"訓練集準確度: {accuracy}")
+# 繪製 Loss 隨時間下降的曲線圖，用以確認模型是否有正確收斂
+plt.plot(losses)
+plt.show()

@@ -5,6 +5,8 @@ import functionsAnn as funann
 import classAnn as classann
 
 def train(nn, X, y, loss_function, epochs=10000, learning_rate=1e-0, reg=1e-3, print_n=10):
+    losses = []  # 用來存每次印出時的損失值
+
     # 開始執行指定次數的訓練循環 (Epochs)
     for epoch in range(epochs):
         # 1. 前向傳播 (Forward Pass)：將資料丟進網路，得到預測結果 f (Logits)
@@ -25,6 +27,10 @@ def train(nn, X, y, loss_function, epochs=10000, learning_rate=1e-0, reg=1e-3, p
         # 6. 定期列印 Log：每隔 print_n 次就印出目前的損失值，追蹤訓練進度
         if epoch % print_n == 0:
             print("iteration %d: loss %f" % (epoch, loss))
+
+        losses.append(loss)  # 紀錄每次的損失值
+            
+    return losses  # 回傳所有紀錄的損失值
 
 # 設定隨機編號（Seed），確保每次執行結果都一樣，方便除錯（Debug）
 np.random.seed(89)
@@ -60,13 +66,20 @@ ann = classann.NeuralNetwork()
 # 新增第一層全連接層：輸入 2 維，輸出 100 維，使用 ReLU 當啟動函數
 ann.add_layer(classann.Dense(2, 100, 'relu'))
 
+# 新增第一層全連接層：輸入 2 維，輸出 100 維，使用 ReLU 當啟動函數
+ann.add_layer(classann.Dense(100, 50, 'relu'))
+
 # 新增第二層全連接層：輸入 100 維，輸出 3 維，使用 softmax 做分類
-ann.add_layer(classann.Dense(100, 3))
+ann.add_layer(classann.Dense(50, 3))
 
 # 開始訓練模型
 # 傳入模型物件 nn、資料、損失與梯度的整合函式，以及相關超參數
-train(ann, X, y, funann.cross_entropy_grad_loss, epochs, learning_rate, reg, print_n)
+losses = train(ann, X, y, funann.cross_entropy_grad_loss, epochs, learning_rate, reg, print_n)
 
 # 訓練完成後，計算模型在訓練集上的準確度（Accuracy）
 # nn.predict(X) 會回傳預測類別，並與真實標籤 y 比較取平均值
 print(np.mean(ann.predict(X) == y))
+
+# 繪製 Loss 隨時間下降的曲線圖，用以確認模型是否有正確收斂
+plt.plot(losses)
+plt.show()

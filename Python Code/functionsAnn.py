@@ -305,6 +305,7 @@ def data_iter(X, y, batch_size, shuffle=False):
    
 def train_batch(nn, XX, YY, loss_function, epochs=10000, batch_size=50, learning_rate=1e-0, reg=1e-3, print_n=10, softmax_out=False, onehot=False):
     iter = 0  # 紀錄總迭代次數
+    losses = []  # 用來存每次印出時的損失值
     for epoch in range(epochs):
         # 每一輪訓練 (Epoch) 都重新打亂資料，取出每一批次的 X 與 y
         for X, y in data_iter(XX, YY, batch_size, True):             
@@ -327,3 +328,7 @@ def train_batch(nn, XX, YY, loss_function, epochs=10000, batch_size=50, learning
             if iter % print_n == 0:
                 print("iteration %d: loss %f" % (iter, loss)) 
             iter += 1
+
+            losses.append(loss)  # 紀錄每次的損失值
+            
+    return losses  # 回傳所有紀錄的損失值
