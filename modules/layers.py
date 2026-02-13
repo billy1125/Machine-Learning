@@ -38,16 +38,18 @@ class Dense(Layer):
     def __init__(self, input_dim, out_dim, init_method=None):
         super().__init__()
 
-        # 權重與偏置
-        self.W = np.empty((input_dim, out_dim))
-        self.b = np.zeros((1, out_dim))
+        # 權重與偏置，修改後：明確指定為浮點數
+        self.W = np.empty((input_dim, out_dim), dtype=np.float64)
+        self.b = np.zeros((1, out_dim), dtype=np.float64)
 
         # 初始化參數（依照指定方法）
         self.reset_parameters(init_method)
 
         # params / grads：常見框架設計，方便 optimizer 取用
         self.params = [self.W, self.b]
-        self.grads = [np.zeros_like(self.W), np.zeros_like(self.b)]
+        self.grads = [
+                        np.zeros_like(self.W, dtype=np.float64), 
+                        np.zeros_like(self.b, dtype=np.float64)]
 
     def reset_parameters(self, init_method=None):
         """
@@ -466,7 +468,6 @@ class Conv(Layer):
     def reset_parameters(self):
         init_weights.kaiming_uniform(self.W, a=math.sqrt(5))
         if self.b is not None:
-            # fan_in = self.C（原碼註解保留）
             fan_in = self.C
             bound = 1 / math.sqrt(fan_in)
             self.b[:] = np.random.uniform(-bound, bound, (self.b.shape))
@@ -489,7 +490,7 @@ class Conv(Layer):
         O_w = 1 + int((X_w + 2 * self.P - F_w) / self.S)
         O = np.zeros((N, F, O_h, O_w))
 
-        # 朴素卷積：逐點計算
+        # 樸素卷積：逐點計算
         for n in range(N):
             for f in range(F):
                 for i in range(O_h):
@@ -505,7 +506,7 @@ class Conv(Layer):
 
     def backward(self, dZ):
         """
-        朴素卷積 backward（逐點累積 dX、dW、db）
+        樸素卷積 backward（逐點累積 dX、dW、db）
         """
         N, F, Z_h, Z_w = dZ.shape
         N, C, X_h, X_w = self.X.shape
@@ -516,12 +517,12 @@ class Conv(Layer):
         H_ = 1 + (X_h + 2 * pad - F_h) // self.S
         W_ = 1 + (X_w + 2 * pad - F_w) // self.S
 
-        dX = np.zeros_like(self.X)
-        dW = np.zeros_like(self.W)
-        db = np.zeros_like(self.b)
+        dX = np.zeros_like(self.X, dtype=np.float64) 
+        dW = np.zeros_like(self.W, dtype=np.float64)
+        db = np.zeros_like(self.b, dtype=np.float64)
 
-        X_pad = np.pad(self.X, [(0, 0), (0, 0), (pad, pad), (pad, pad)], 'constant')
-        dX_pad = np.pad(dX, [(0, 0), (0, 0), (pad, pad), (pad, pad)], 'constant')
+        X_pad = np.pad(self.X, [(0, 0), (0, 0), (pad, pad), (pad, pad)], 'constant').astype(np.float64)
+        dX_pad = np.pad(dX, [(0, 0), (0, 0), (pad, pad), (pad, pad)], 'constant').astype(np.float64)
 
         for n in range(N):
             for f in range(F):
@@ -593,7 +594,7 @@ class Pool(Layer):
         oH = 1 + (H - kH) // stride
         oW = 1 + (W - kW) // stride
 
-        dx = np.zeros_like(x)
+        dx = np.zeros_like(x, dtype=np.float64)
 
         for k in range(N):
             for l in range(C):
@@ -940,8 +941,6 @@ def vecterization(size, indexes):
     x = np.expand_dims(x, axis=1)  # batch_size=1：(seq_len, 1, input_size)
     return x
 
-
-import numpy as np  # ※ 重複 import（保留原碼行為）
 def one_hot(size, indices, expend=False):
     """
     ※ 注意：這裡的 one_hot 會覆蓋前面同名 one_hot（Python 後定義者生效）
@@ -959,7 +958,6 @@ def one_got_np(size, indices, expend=False):
 
 # one_hot(10,[3,2,5])
 # vecterization(10,[3,2,5])
-
 
 # =============================================================================
 # Embedding：查表式嵌入層
