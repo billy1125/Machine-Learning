@@ -1,18 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-整理重點（不改邏輯、不修錯、不中途刪任何程式碼）：
-1) 保留原本所有程式碼與先後順序（避免影響執行結果）。
-2) 只做「排版整理、補註解、統一註解為繁體（台灣用語）」。
-3) 原碼中有一些重複定義（例如 one_hot、重複 import numpy），我不移除，會用註解標清楚。
-"""
-
-# =============================================================================
-# 匯入套件 / 依賴模組
-# =============================================================================
 import numpy as np
-from im2row import *          # 依賴：im2row / row2im 相關函式（外部檔案）
-from init_weights import *    # 依賴：權重初始化相關函式（外部檔案）
-
+import math
+from . import util            # 依賴：數值微分、損失函數相關函式（外部檔案）
+from . import im2row          # 依賴：im2row / row2im 相關函式（外部檔案）
+from . import init_weights    # 依賴：權重初始化相關函式（外部檔案）
 
 # =============================================================================
 # Layer：所有層的基底類別（介面定義）
@@ -64,7 +54,6 @@ class Dense(Layer):
         參數初始化：
         - init_method 若有提供，格式為 (method_name, value)
         - 若無提供，預設使用 'kaiming_uniform', math.sqrt(5)
-        注意：原碼使用 math，但原碼未 import math；依你的要求不修正。
         """
         if init_method is not None:
             method_name, value = init_method
@@ -72,22 +61,22 @@ class Dense(Layer):
             method_name, value = 'kaiming_uniform', math.sqrt(5)
 
         if method_name == "kaiming_uniform":
-            kaiming_uniform(self.W, value)
+            init_weights.kaiming_uniform(self.W, value)
             fan_in = self.W.shape[0]
             bound = 1 / math.sqrt(fan_in)
             self.b = np.random.uniform(-bound, bound, (self.b.shape))
 
         elif method_name == "kaiming_normal":
-            kaiming_normal(self.W, value)
+            init_weights.kaiming_normal(self.W, value)
             fan_in = self.W.shape[0]
             std = 1 / math.sqrt(fan_in)
             self.b = np.random.normal(0, std, (self.b.shape))
 
         elif method_name == "xavier_uniform":
-            xavier_uniform(self.W, value)
+            init_weights.xavier_uniform(self.W, value)
 
         elif method_name == "xavier_normal":
-            xavier_normal(self.W, value)
+            init_weights.xavier_normal(self.W, value)
 
         else:
             # 其他初始化策略：用標準常態分佈乘上 value
@@ -244,7 +233,7 @@ class BatchNorm_1d(Layer):
         self.running_mu = np.zeros((1, num_features))
         self.running_var = np.zeros((1, num_features))
 
-    def forward(self, X, training=True):
+    def forward(self, X, training=True, eps=None):
         if training:
             self.n_X = X.shape[0]
             self.X_shape = X.shape
@@ -317,7 +306,7 @@ class BatchNorm(Layer):
         self.running_mu = np.zeros((1, num_features))
         self.running_var = np.zeros((1, num_features))
 
-    def forward(self, X, training=True):
+    def forward(self, X, training=True, eps=None):
         N, C, H, W = X.shape
         self.X_shape = X.shape
 
@@ -420,6 +409,7 @@ class BatchNorm(Layer):
 # Dropout
 # =============================================================================
 # https://deepnotes.io/dropout
+
 class Dropout(Layer):
     def __init__(self, dropout_p=0.5, seed=None):
         super().__init__()
@@ -451,7 +441,7 @@ class Dropout(Layer):
 
 
 # =============================================================================
-# Conv：朴素版卷積（for 迴圈版）
+# Conv：樸素版卷積（for 迴圈版）
 # =============================================================================
 class Conv(Layer):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0):
@@ -474,7 +464,7 @@ class Conv(Layer):
         self.reset_parameters()
 
     def reset_parameters(self):
-        kaiming_uniform(self.W, a=math.sqrt(5))
+        init_weights.kaiming_uniform(self.W, a=math.sqrt(5))
         if self.b is not None:
             # fan_in = self.C（原碼註解保留）
             fan_in = self.C
@@ -727,7 +717,7 @@ class Conv_fast():
         self.reset_parameters()
 
     def reset_parameters(self):
-        kaiming_uniform(self.K, a=math.sqrt(5))
+        init_weights.kaiming_uniform(self.K, a=math.sqrt(5))
         if self.b is not None:
             fan_in = self.C
             bound = 1 / math.sqrt(fan_in)
@@ -749,7 +739,7 @@ class Conv_fast():
         X_shape = (self.N, self.C, self.H, self.W)
 
         if True:
-            self.X_row = im2row_indices(X, self.kH, self.kW, S=self.S, P=self.P)
+            self.X_row = im2row.im2row_indices(X, self.kH, self.kW, S=self.S, P=self.P)
         else:
             if P == 0:
                 X_pad = X
@@ -793,7 +783,7 @@ class Conv_fast():
 
         if True:
             X_shape = (self.N, self.C, self.H, self.W)
-            dX = row2im_indices(dX_row, X_shape, self.kH, self.kW, S=self.S, P=self.P)
+            dX = im2row.row2im_indices(dX_row, X_shape, self.kH, self.kW, S=self.S, P=self.P)
         else:
             dX_pad = row2im(dX_row, oH, oW, kH, kW, S)
             if P == 0:
@@ -842,9 +832,9 @@ class Conv_transpose():
         self.reset_parameters()
 
     def reset_parameters(self):
-        kaiming_uniform(self.K, a=math.sqrt(5))
+        init_weights.kaiming_uniform(self.K, a=math.sqrt(5))
         if self.b is not None:
-            fan_in, _ = calculate_fan_in_and_fan_out(self.K)
+            fan_in, _ = init_weights.calculate_fan_in_and_fan_out(self.K)
             bound = 1 / math.sqrt(fan_in)
             self.b[:] = np.random.uniform(-bound, bound, (self.b.shape))
 
@@ -882,7 +872,7 @@ class Conv_transpose():
         Z_row = np.dot(X_row, K_col.T)
 
         Z_shape = (self.N, self.F, self.oH, self.oW)
-        Z = row2im_indices(Z_row, Z_shape, self.kH, self.kW, S=self.S, P=self.P)
+        Z = im2row.row2im_indices(Z_row, Z_shape, self.kH, self.kW, S=self.S, P=self.P)
 
         self.b = self.b.reshape(1, self.F, 1, 1)
         Z += self.b
@@ -897,7 +887,7 @@ class Conv_transpose():
         N, F, oH, oW = dZ.shape[0], dZ.shape[1], dZ.shape[2], dZ.shape[3]
         S, P, kH, kW = self.S, self.P, self.kH, self.kW
 
-        dZ_row = im2row_indices(dZ, self.kH, self.kW, S=self.S, P=self.P)
+        dZ_row = im2row.im2row_indices(dZ, self.kH, self.kW, S=self.S, P=self.P)
 
         K_col = self.K.reshape(self.K.shape[0], -1).transpose()
 

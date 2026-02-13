@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Nov 14 10:13:37 2019
-
-@author: hwdon
-"""
-
 import numpy as np
 import math
 
