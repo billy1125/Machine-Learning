@@ -42,11 +42,10 @@ def row2im_v2(dx_row, oH, oW, kH, kW, S):
             dx[:, :, hS:hS_kH, wS:wS+kW] += row.reshape(N, C, kH, kW)          
     return dx
 
+# im2row 的第一個版本，使用雙層迴圈遍歷空間維度
+# 這個版本的效率較低，因為 Python 的迴圈性能不佳，實際使用中建議改用基於索引的版本 (im2row_indices)
+# 參數：x: 輸入圖片 (N, C, H, W), kH: 卷積核高度, kW: 卷積核寬度, S: 步長 (Stride)
 def im2row(x, kH, kW, S=1):
-    """
-    將影像張量轉換為矩陣形式 (im2row)
-    以便將卷積運算轉化為矩陣乘法。
-    """
     # N: 樣本數, C: 通道數, H: 影像高度, W: 影像寬度
     N, C, H, W = x.shape
     
