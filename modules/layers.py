@@ -556,6 +556,122 @@ class Conv(Layer):
         self.grads[0] += 2 * reg * self.W
         return reg * np.sum(self.W ** 2)
 
+# =============================================================================
+# Conv_fast：使用 im2row + GEMM 的卷積版本（加速版）
+# =============================================================================
+class Conv_fast():       
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0):
+            super().__init__()
+            # 初始化超參數 (Hyperparameters)
+            self.C = in_channels    # 輸入通道數
+            self.F = out_channels   # 輸出通道數 (Filter 數量)
+            self.kH = kernel_size   # 卷積核高度
+            self.kW = kernel_size   # 卷積核寬度
+            self.S = stride         # 步長
+            self.P = padding        # 填充
+            
+            # 初始化權重 (Weights) 與 偏置 (Bias)
+            # 使用常態分佈初始化 K (Kernel)
+            self.K = np.random.normal(0, 1, (self.F, self.C, self.kH, self.kW))
+            self.b = np.zeros((1, self.F)) 
+            
+            # 儲存參數與對應的梯度 (Gradients)
+            self.params = [self.K, self.b]
+            self.grads = [np.zeros_like(self.K), np.zeros_like(self.b)]
+            self.X = None
+            self.reset_parameters() # 執行參數初始化 (如 Kaiming 初始化)
+            
+    def reset_parameters(self):
+        """根據深度學習慣例重置參數分布"""
+        init_weights.kaiming_uniform(self.K, a=math.sqrt(5))
+        if self.b is not None:
+            fan_in = self.C
+            bound = 1 / math.sqrt(fan_in)
+            self.b[:] = np.random.uniform(-bound, bound, (self.b.shape))
+            
+    def forward(self, X):      
+        """前向傳播運算"""
+        self.X = X
+        # 自動處理輸入維度，確保其符合 (N, C, H, W) 格式
+        if len(X.shape) == 1:
+            X = X.reshape(X.shape[0], 1, 1, 1)
+        elif len(X.shape) == 2:
+            X = X.reshape(X.shape[0], X.shape[1], 1, 1)
+  
+        self.N, self.H, self.W = X.shape[0], X.shape[2], X.shape[3]
+        S, P, kH, kW = self.S, self.P, self.kH, self.kW
+        
+        # 計算輸出特徵圖 (Output Feature Map) 的維度
+        self.oH = (self.H - kH + 2*P) // S + 1
+        self.oW = (self.W - kW + 2*P) // S + 1   
+        
+        # 將輸入影像張量展開為矩陣 (im2row)，以加速運算
+        self.X_row = im2row.im2row_indices(X, self.kH, self.kW, S=self.S, P=self.P)        
+       
+        # 將卷積核攤平，準備進行矩陣乘法 (GEMM)
+        K_col = self.K.reshape(self.F, -1).transpose()         
+        # 執行核心運算：Z = X_row * K_col + Bias
+        Z_row = self.X_row @ K_col + self.b 
+       
+        # 將計算結果還原為 (N, C, H, W) 的張量形狀
+        Z = Z_row.reshape(self.N, self.oH, self.oW, -1)
+        Z = Z.transpose(0, 3, 1, 2)           
+        return Z
+
+    def __call__(self, x):
+         return self.forward(x)
+
+    def backward(self, dZ): 
+        """反向傳播運算，計算梯度"""
+        if len(dZ.shape) <= 2:
+            dZ = dZ.reshape(dZ.shape[0], -1, self.oH, self.oW)
+        
+        K = self.K
+        F = dZ.shape[1] 
+        assert(F == self.F)
+        
+        # 將輸出梯度 dZ 攤平，與 Z_row 的形狀對齊
+        dZ_row = dZ.transpose(0, 2, 3, 1).reshape(-1, F)
+        
+        # 1. 計算對卷積核 (Kernel) 的梯度 dK
+        dK_col = np.dot(self.X_row.T, dZ_row) 
+        dK_col = dK_col.transpose(1, 0) 
+        dK = dK_col.reshape(self.K.shape)
+        
+        # 2. 計算對偏置 (Bias) 的梯度 db
+        db = np.sum(dZ, axis=(0, 2, 3))
+        db = db.reshape(-1, F)
+
+        # 3. 計算對輸入 (Input) 的梯度 dX，傳給上一層使用
+        K_col = K.reshape(K.shape[0], -1).transpose()
+        dX_row = np.dot(dZ_row, K_col.T)
+
+        # 將矩陣形式的梯度還原回影像張量格式 (row2im)
+        X_shape = (self.N, self.C, self.H, self.W)
+        dX = im2row.row2im_indices(dX_row, X_shape, self.kH, self.kW, S=self.S, P=self.P)     
+        
+        # 確保 dX 形狀與原始輸入一致
+        dX = dX.reshape(self.X.shape)
+        
+        # 累積梯度（這在實作 Optimizer 時很重要）
+        self.grads[0] += dK
+        self.grads[1] += db
+                 
+        return dX
+    
+    # -------- 正規化 (Regularization) 相關功能 -----
+    def reg_grad(self, reg):
+        """計算 L2 正規化的梯度項"""
+        self.grads[0] += 2 * reg * self.K
+        
+    def reg_loss(self, reg):
+        """計算 L2 正規化的 Loss"""
+        return reg * np.sum(self.K**2)
+    
+    def reg_loss_grad(self, reg):
+        """同時回傳正規化 Loss 並更新權重梯度"""
+        self.grads[0] += 2 * reg * self.K
+        return reg * np.sum(self.K**2)
 
 # =============================================================================
 # Pool：Max Pooling
