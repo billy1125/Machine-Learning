@@ -1,9 +1,10 @@
 ﻿import numpy as np
 
+# 將矩陣化的 Row 向量還原回圖片格式（用於反向傳播時，將梯度還原回原始影像維度）
+# 參數：dx_row: 從上一層傳回的梯度 (已經是 Row 形式), oH/oW: 輸出特徵圖的空間維度
+#      kH/kW: 卷積核尺寸, S: 步長 (Stride)
+# 返回值：dx: 還原回原始圖片維度的梯度
 def row2im(dx_row, oH, oW, kH, kW, S):
-    """
-    將矩陣化的 Row 向量還原回圖片格式（用於反向傳播時，將梯度還原回原始影像維度）
-    """
     nRow, K2C = dx_row.shape[0], dx_row.shape[1]
     C = K2C // (kH * kW)  # 計算通道數 (Channels)
     N = nRow // (oH * oW)  # 計算樣本數 (Batch Size)
@@ -113,10 +114,11 @@ def conv_forward(X, K, S=1, P=0):
     Z = Z.transpose(0, 3, 1, 2) # 調整維度順序為 (Batch, Filter, Height, Width)
     return Z
 
-def conv_backward(dZ, K, oH, oW, kH, kW, S=1, P=0):
-    """
-    卷積層的反向傳播 (Backward Pass)
-    """
+# 卷積層的反向傳播 (Backward Pass)
+# 參數：X_row: 前向傳播時轉換成 Row 的輸入資料, dZ: 上一層傳回的梯度, K: 卷積核參數,
+#      oH/oW: 輸出特徵圖的空間維度, kH/kW: 卷積核的尺寸, S: 步長 (Stride), P: 補零 (Padding)
+# 返回值：dX: 傳給前一層的梯度, dK: 卷積核參數的梯度, db: 偏差項的梯度
+def conv_backward(X_row, dZ, K, oH, oW, kH, kW, S=1, P=0):
     F = dZ.shape[1]  
     # 將上一層傳回的梯度 (dZ) 進行轉置並攤平
     dZ_row = dZ.transpose(0, 2, 3, 1).reshape(-1, F)
