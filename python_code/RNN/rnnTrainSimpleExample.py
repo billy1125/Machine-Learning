@@ -1,7 +1,7 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-import functionsRnn as fr
+import modules.rnn as fr
 
 
 def rnn_train_epoch(params, data_iter, optimizer, iterations, loss_function, print_n=100):
