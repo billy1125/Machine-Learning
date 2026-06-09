@@ -11,8 +11,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 使用 Conda 管理 Python 環境（Python 3.10）。
 
 ```bash
+# 建立環境（初次設定）
+conda create --name machinelearning python=3.10
+
 # 啟動環境
 conda activate machinelearning
+
+# 安裝套件（conda 管理的套件）
+conda install jupyter numpy pandas matplotlib scipy scikit-learn statsmodels seaborn
+
+# 安裝 conda 未收錄的套件（透過 pip）
+pip install lifelines
 
 # 啟動 Jupyter
 jupyter notebook
