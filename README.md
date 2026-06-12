@@ -38,14 +38,32 @@ conda install numpy pandas matplotlib scipy scikit-learn statsmodels seaborn
 pip install lifelines
 ```
 
+## 從零實作神經網路架構（`python_code/`）
+
+純 NumPy 手刻，不依賴任何深度學習框架：
+
+**CNN 框架**（`python_code/CNN/`）
+- `functionsCnn.py`：所有層定義（`Layer` 基底類別、`Dense`、`Conv`、`Pool`、`BatchNorm`、`Activation` 等）
+- `classCnn.py`：`NeuralNetwork` 容器，管理層串接、前向／反向傳播、正規化損失
+- `classTrain.py`：優化器（`SGD`、`Adam`、`AdaGrad`、`RMSprop`）
+- `init_weights.py`：Kaiming、Xavier 等參數初始化方法
+- `cnnTrainExample.py`：完整訓練範例
+
+> 執行 CNN 腳本前需先切換到 `python_code/CNN/` 目錄（本地 import 依賴此路徑）。
+
+**RNN 框架**（`python_code/RNN/`）
+- `rnnTrainSimpleExample.py`：簡單 RNN 訓練範例，引用根目錄的 `modules/rnn`
+
+> 執行 RNN 腳本需在專案根目錄（`import modules.rnn as fr` 依賴根目錄 `modules/` 套件）。
+
 ## 資料集
 
 `Data/` 目錄下包含練習用的資料集：
 
 - `mnist_train.csv` / `mnist_test.csv`：手寫數字辨識
 - `Iris.csv`：鳶尾花分類
-- `heart_failure_clinical_records_dataset.csv`：心臟衰竭臨床資料
+- `heart_failure_clinical_records_dataset.csv`：心臟衰竭臨床資料（存活分析）
 - `water.csv` / `water.mat`：水質資料
-- `Real estate.csv`：房地產資料
+- `Real estate.csv`：房地產資料（迴歸）
 - `student-por.csv`：學生成績資料
-- `food_truck_data.csv`：餐車銷售資料
+- `food_truck_data.csv`：餐車銷售資料（簡單迴歸）

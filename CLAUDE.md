@@ -45,24 +45,35 @@ jupyter notebook
 
 這部分是不依賴深度學習框架、純 NumPy 手刻的神經網路：
 
-- **`functionsCnn.py`**：所有層的定義（`Layer` 基底類別、`Dense`、Conv、Pool、BatchNorm、Activation 等）
-- **`classCnn.py`**：`NeuralNetwork` 容器類別，管理層的串接、前向/反向傳播、梯度歸零
-- **`classTrain.py`**：優化器（`SGD`、`Adam`、`AdaGrad`、`RMSprop`）與訓練迴圈 `train_nn`、資料迭代器 `data_iterator`
-- **`init_weights.py`**：參數初始化方法（Kaiming、Xavier 等）
-- **`cnnTrainExample.py`**：使用上述模組的完整訓練範例
+- **`functionsCnn.py`**：所有層定義（`Layer` 基底類別、`Dense`、`Conv`、`Pool`、`BatchNorm`、`Activation` 等），使用 `from init_weights import *` 載入初始化方法
+- **`classCnn.py`**：`NeuralNetwork` 容器類別，管理層串接（`add_layer`）、前向傳播（`forward`/`__call__`）、反向傳播（`backward`）與正規化損失（`reg_loss`）
+- **`classTrain.py`**：優化器基底類別 `Optimizer`（含 `zero_grad`/`step`/`regularization`）與子類別 `SGD`、`Adam`、`AdaGrad`、`RMSprop`
+- **`init_weights.py`**：參數初始化方法（Kaiming uniform/normal、Xavier 等）
+- **`cnnTrainExample.py`**：完整訓練範例
 
-`modules/` 內的 RNN 模組供 `python_code/RNN/` 的範例引用（`import modules.rnn as fr`）。
+**執行注意事項**：CNN 相關腳本（`cnnTrainExample.py` 等）必須在 `python_code/CNN/` 目錄下執行，才能正確解析本地 import（`from classCnn import NeuralNetwork`、`from functionsCnn import *`）。RNN 範例（`python_code/RNN/rnnTrainSimpleExample.py`）則需從專案根目錄執行，因為 `import modules.rnn as fr` 依賴根目錄的 `modules/` 套件。
+
+## 資料集（`Data/`）
+
+| 檔案 | 用途 |
+|------|------|
+| `mnist_train.csv` / `mnist_test.csv` | 手寫數字辨識（MNIST） |
+| `Iris.csv` | 鳶尾花分類 |
+| `heart_failure_clinical_records_dataset.csv` | 心臟衰竭臨床資料（存活分析） |
+| `water.csv` / `water.mat` | 水質資料 |
+| `Real estate.csv` | 房地產資料（迴歸） |
+| `student-por.csv` | 學生成績資料 |
+| `food_truck_data.csv` | 餐車銷售資料（簡單迴歸） |
 
 ## 使用的套件
 
-| 套件 | 用途 |
-|------|------|
-| `numpy` | 數值計算（矩陣運算、從零實作神經網路的核心） |
-| `pandas` | 資料載入與處理 |
-| `matplotlib` | 資料視覺化與訓練曲線繪製 |
-| `scipy` | 科學計算（統計分析、訊號處理） |
-| `sklearn` (scikit-learn) | 機器學習工具（模型評估、前處理、現成演算法對照） |
-| `statsmodels` | 統計模型（線性迴歸、GLM） |
-| `seaborn` | 統計圖表視覺化 |
-| `lifelines` | 存活分析（Cox 比例風險模型） |
-| `mpl_toolkits` | 3D 視覺化（matplotlib 延伸） |
+| 套件 | 建議版本 | 用途 |
+|------|----------|------|
+| `numpy` | ≥1.23 | 數值計算（從零實作神經網路的核心） |
+| `pandas` | ≥1.5 | 資料載入與處理 |
+| `matplotlib` | ≥3.5 | 資料視覺化與訓練曲線繪製 |
+| `scipy` | ≥1.9 | 科學計算、統計分析 |
+| `scikit-learn` | ≥1.1 | 模型評估、前處理、現成演算法對照 |
+| `statsmodels` | ≥0.13 | 統計模型（線性迴歸、GLM） |
+| `seaborn` | ≥0.12 | 統計圖表視覺化 |
+| `lifelines` | ≥0.27 | 存活分析（Cox 比例風險模型，需 pip 安裝） |
