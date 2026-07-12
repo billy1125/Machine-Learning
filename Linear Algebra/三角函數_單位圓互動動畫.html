@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三角函數 Volume II：單位圓互動動畫</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f7fb;
+  --panel: #ffffff;
+  --text: #172033;
+  --muted: #5f6b7a;
+  --line: #d8e0ea;
+  --blue: #1769e0;
+  --red: #d64545;
+  --green: #248a57;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+header {
+  padding: 28px 20px 16px;
+  text-align: center;
+}
+h1 { margin: 0 0 8px; font-size: clamp(1.7rem, 4vw, 2.7rem); }
+header p { margin: 0; color: var(--muted); }
+main {
+  width: min(1200px, calc(100% - 24px));
+  margin: 0 auto 40px;
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 8px 24px rgba(20, 40, 70, .06);
+}
+.controls {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.control-row {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+input[type="range"] { width: 100%; }
+button {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+  border-radius: 10px;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--blue); color: var(--blue); }
+.button-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.grid {
+  display: grid;
+  grid-template-columns: minmax(320px, .9fr) minmax(420px, 1.4fr);
+  gap: 16px;
+}
+canvas {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+.values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.value {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.value strong { display: block; font-size: .84rem; color: var(--muted); }
+.value span { font-size: 1.05rem; }
+.warning {
+  margin-top: 12px;
+  min-height: 24px;
+  color: #9b2c2c;
+  font-weight: 600;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: .92rem;
+}
+.dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; }
+@media (max-width: 860px) {
+  .grid { grid-template-columns: 1fr; }
+  .control-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>三角函數 Volume II：單位圓互動動畫</h1>
+  <p>拖曳角度，觀察單位圓、座標、函數值與圖形的同步變化。</p>
+</header>
+
+<main>
+  <section class="panel controls">
+    <div class="control-row">
+      <label for="angle">角度 \(x\)</label>
+      <input id="angle" type="range" min="0" max="6283" value="1047" step="1">
+      <output id="angleOutput">π/3</output>
+    </div>
+
+    <div class="button-row">
+      <button data-angle="0">0</button>
+      <button data-angle="0.5235987756">π/6</button>
+      <button data-angle="0.7853981634">π/4</button>
+      <button data-angle="1.0471975512">π/3</button>
+      <button data-angle="1.5707963268">π/2</button>
+      <button data-angle="3.1415926536">π</button>
+      <button data-angle="4.7123889804">3π/2</button>
+      <button data-angle="6.2831853072">2π</button>
+      <button id="play">播放</button>
+      <button id="reset">重設</button>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="panel">
+      <h2>單位圓</h2>
+      <canvas id="circle" width="520" height="520"></canvas>
+
+      <div class="values">
+        <div class="value"><strong>角度</strong><span id="vAngle"></span></div>
+        <div class="value"><strong>座標 P</strong><span id="vPoint"></span></div>
+        <div class="value"><strong>sin x</strong><span id="vSin"></span></div>
+        <div class="value"><strong>cos x</strong><span id="vCos"></span></div>
+        <div class="value"><strong>tan x</strong><span id="vTan"></span></div>
+        <div class="value"><strong>cot x</strong><span id="vCot"></span></div>
+        <div class="value"><strong>sec x</strong><span id="vSec"></span></div>
+        <div class="value"><strong>csc x</strong><span id="vCsc"></span></div>
+      </div>
+
+      <div id="warning" class="warning"></div>
+    </div>
+
+    <div class="panel">
+      <h2>sine graph 與 cosine graph</h2>
+      <canvas id="graph" width="760" height="520"></canvas>
+      <div class="legend">
+        <span><i class="dot" style="background:#1769e0"></i>y = sin x</span>
+        <span><i class="dot" style="background:#d64545"></i>y = cos x</span>
+        <span><i class="dot" style="background:#248a57"></i>目前角度</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const slider = document.getElementById("angle");
+const angleOutput = document.getElementById("angleOutput");
+const circleCanvas = document.getElementById("circle");
+const graphCanvas = document.getElementById("graph");
+const cctx = circleCanvas.getContext("2d");
+const gctx = graphCanvas.getContext("2d");
+const EPSILON = 1e-6;
+
+let playing = false;
+let animationId = null;
+
+function clean(value) {
+  if (Math.abs(value) < 1e-10) return 0;
+  return value;
+}
+
+function format(value) {
+  if (!Number.isFinite(value)) return "未定義";
+  return clean(value).toFixed(4).replace(/\.?0+$/, "");
+}
+
+function angleLabel(a) {
+  const tests = [
+    [0, "0"], [Math.PI/6, "π/6"], [Math.PI/4, "π/4"],
+    [Math.PI/3, "π/3"], [Math.PI/2, "π/2"], [Math.PI, "π"],
+    [3*Math.PI/2, "3π/2"], [2*Math.PI, "2π"]
+  ];
+  for (const [v, label] of tests) {
+    if (Math.abs(a - v) < 0.002) return label;
+  }
+  return `${a.toFixed(3)} rad`;
+}
+
+function drawAxes(ctx, cx, cy, radius) {
+  ctx.strokeStyle = "#7b8794";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(cx - radius - 25, cy);
+  ctx.lineTo(cx + radius + 25, cy);
+  ctx.moveTo(cx, cy - radius - 25);
+  ctx.lineTo(cx, cy + radius + 25);
+  ctx.stroke();
+}
+
+function drawCircle(angle) {
+  const w = circleCanvas.width;
+  const h = circleCanvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+  const r = 180;
+  const px = cx + r * Math.cos(angle);
+  const py = cy - r * Math.sin(angle);
+
+  cctx.clearRect(0, 0, w, h);
+  drawAxes(cctx, cx, cy, r);
+
+  cctx.strokeStyle = "#172033";
+  cctx.lineWidth = 2;
+  cctx.beginPath();
+  cctx.arc(cx, cy, r, 0, Math.PI * 2);
+  cctx.stroke();
+
+  cctx.strokeStyle = "#248a57";
+  cctx.lineWidth = 3;
+  cctx.beginPath();
+  cctx.moveTo(cx, cy);
+  cctx.lineTo(px, py);
+  cctx.stroke();
+
+  cctx.strokeStyle = "#1769e0";
+  cctx.setLineDash([7, 6]);
+  cctx.beginPath();
+  cctx.moveTo(cx, py);
+  cctx.lineTo(px, py);
+  cctx.stroke();
+
+  cctx.strokeStyle = "#d64545";
+  cctx.beginPath();
+  cctx.moveTo(px, cy);
+  cctx.lineTo(px, py);
+  cctx.stroke();
+  cctx.setLineDash([]);
+
+  cctx.fillStyle = "#1769e0";
+  cctx.beginPath();
+  cctx.arc(px, py, 7, 0, Math.PI * 2);
+  cctx.fill();
+
+  cctx.font = "20px sans-serif";
+  cctx.fillStyle = "#172033";
+  cctx.fillText("O", cx + 8, cy + 24);
+  cctx.fillText("x", cx + r + 30, cy - 8);
+  cctx.fillText("y", cx + 10, cy - r - 30);
+
+  cctx.fillStyle = "#1769e0";
+  cctx.fillText("sin x", cx - 70, py - 10);
+  cctx.fillStyle = "#d64545";
+  cctx.fillText("cos x", px + 10, cy + 24);
+
+  cctx.fillStyle = "#172033";
+  cctx.fillText("P(cos x, sin x)", Math.min(px + 12, w - 190), Math.max(py - 12, 24));
+}
+
+function mapX(x, left, width) {
+  return left + (x / (2 * Math.PI)) * width;
+}
+
+function mapY(y, top, height) {
+  return top + height / 2 - y * (height / 2.5);
+}
+
+function drawGraph(angle) {
+  const w = graphCanvas.width;
+  const h = graphCanvas.height;
+  const left = 62, right = 28, top = 36, bottom = 52;
+  const gw = w - left - right;
+  const gh = h - top - bottom;
+
+  gctx.clearRect(0, 0, w, h);
+
+  gctx.strokeStyle = "#a0a9b5";
+  gctx.lineWidth = 1;
+  gctx.beginPath();
+  gctx.moveTo(left, top + gh/2);
+  gctx.lineTo(left + gw, top + gh/2);
+  gctx.moveTo(left, top);
+  gctx.lineTo(left, top + gh);
+  gctx.stroke();
+
+  const ticks = [
+    [0, "0"], [Math.PI/2, "π/2"], [Math.PI, "π"],
+    [3*Math.PI/2, "3π/2"], [2*Math.PI, "2π"]
+  ];
+
+  gctx.font = "16px sans-serif";
+  gctx.fillStyle = "#5f6b7a";
+  for (const [x, label] of ticks) {
+    const sx = mapX(x, left, gw);
+    gctx.beginPath();
+    gctx.moveTo(sx, top + gh/2 - 5);
+    gctx.lineTo(sx, top + gh/2 + 5);
+    gctx.stroke();
+    gctx.fillText(label, sx - 12, top + gh/2 + 26);
+  }
+  gctx.fillText("1", left - 26, mapY(1, top, gh) + 5);
+  gctx.fillText("-1", left - 32, mapY(-1, top, gh) + 5);
+
+  function drawCurve(fn, color) {
+    gctx.strokeStyle = color;
+    gctx.lineWidth = 3;
+    gctx.beginPath();
+    const steps = 500;
+    for (let i = 0; i <= steps; i++) {
+      const x = (i / steps) * 2 * Math.PI;
+      const sx = mapX(x, left, gw);
+      const sy = mapY(fn(x), top, gh);
+      if (i === 0) gctx.moveTo(sx, sy);
+      else gctx.lineTo(sx, sy);
+    }
+    gctx.stroke();
+  }
+
+  drawCurve(Math.sin, "#1769e0");
+  drawCurve(Math.cos, "#d64545");
+
+  const sx = mapX(angle, left, gw);
+  gctx.strokeStyle = "#248a57";
+  gctx.lineWidth = 2;
+  gctx.setLineDash([6, 5]);
+  gctx.beginPath();
+  gctx.moveTo(sx, top);
+  gctx.lineTo(sx, top + gh);
+  gctx.stroke();
+  gctx.setLineDash([]);
+
+  const sinY = mapY(Math.sin(angle), top, gh);
+  const cosY = mapY(Math.cos(angle), top, gh);
+
+  gctx.fillStyle = "#1769e0";
+  gctx.beginPath();
+  gctx.arc(sx, sinY, 6, 0, Math.PI * 2);
+  gctx.fill();
+
+  gctx.fillStyle = "#d64545";
+  gctx.beginPath();
+  gctx.arc(sx, cosY, 6, 0, Math.PI * 2);
+  gctx.fill();
+}
+
+function update() {
+  const angle = Number(slider.value) / 1000;
+  const sin = clean(Math.sin(angle));
+  const cos = clean(Math.cos(angle));
+
+  const tanDefined = Math.abs(cos) > EPSILON;
+  const cotDefined = Math.abs(sin) > EPSILON;
+
+  angleOutput.textContent = angleLabel(angle);
+  document.getElementById("vAngle").textContent = `${angleLabel(angle)} (${angle.toFixed(4)} rad)`;
+  document.getElementById("vPoint").textContent = `(${format(cos)}, ${format(sin)})`;
+  document.getElementById("vSin").textContent = format(sin);
+  document.getElementById("vCos").textContent = format(cos);
+  document.getElementById("vTan").textContent = tanDefined ? format(sin / cos) : "未定義";
+  document.getElementById("vCot").textContent = cotDefined ? format(cos / sin) : "未定義";
+  document.getElementById("vSec").textContent = tanDefined ? format(1 / cos) : "未定義";
+  document.getElementById("vCsc").textContent = cotDefined ? format(1 / sin) : "未定義";
+
+  const warnings = [];
+  if (!tanDefined) warnings.push("cos x = 0，因此 tan x 與 sec x 未定義。");
+  if (!cotDefined) warnings.push("sin x = 0，因此 cot x 與 csc x 未定義。");
+  document.getElementById("warning").textContent = warnings.join(" ");
+
+  drawCircle(angle);
+  drawGraph(angle);
+}
+
+slider.addEventListener("input", update);
+
+document.querySelectorAll("[data-angle]").forEach(button => {
+  button.addEventListener("click", () => {
+    slider.value = Math.round(Number(button.dataset.angle) * 1000);
+    update();
+  });
+});
+
+document.getElementById("reset").addEventListener("click", () => {
+  playing = false;
+  cancelAnimationFrame(animationId);
+  document.getElementById("play").textContent = "播放";
+  slider.value = 0;
+  update();
+});
+
+document.getElementById("play").addEventListener("click", event => {
+  playing = !playing;
+  event.currentTarget.textContent = playing ? "暫停" : "播放";
+  if (playing) animate();
+  else cancelAnimationFrame(animationId);
+});
+
+function animate() {
+  if (!playing) return;
+  let angle = Number(slider.value) / 1000;
+  angle += 0.012;
+  if (angle > 2 * Math.PI) angle = 0;
+  slider.value = Math.round(angle * 1000);
+  update();
+  animationId = requestAnimationFrame(animate);
+}
+
+update();
+</script>
+</body>
+</html>
